@@ -1,5 +1,5 @@
 from flask import Flask
-import time, random
+import time, random, os
 
 # --- OpenTelemetry imports ---
 from opentelemetry import trace
@@ -9,16 +9,18 @@ from opentelemetry.sdk.trace import TracerProvider
 from opentelemetry.exporter.otlp.proto.http.trace_exporter import OTLPSpanExporter
 from opentelemetry.sdk.trace.export import BatchSpanProcessor
 
-# --- Dynatrace OTLP setup ---
+# --- Dynatrace OTLP setup using environment variables ---
 resource = Resource(attributes={
-    "service.name": "flask-dynatrace-app"
+    "service.name": os.getenv("OTEL_RESOURCE_ATTRIBUTES", "flask-dynatrace-app").split("=")[-1]
 })
 
 trace.set_tracer_provider(TracerProvider(resource=resource))
 
 otlp_exporter = OTLPSpanExporter(
-    endpoint="https://<your-env-id>.live.dynatrace.com/api/v2/otlp",
-    headers={"Authorization": "Api-Token <your-token>"}
+    endpoint=os.getenv("OTEL_EXPORTER_OTLP_ENDPOINT"),
+    headers={
+        "Authorization": os.getenv("OTEL_EXPORTER_OTLP_HEADERS").split("Authorization=")[-1]
+    }
 )
 
 span_processor = BatchSpanProcessor(otlp_exporter)
